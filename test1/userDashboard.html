@@ -1,0 +1,865 @@
+
+
+
+ <!DOCTYPE html>
+<html>
+<head>
+    <title>User Dashboard</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+</head>
+<body>
+    <div class="navbar">
+        <a href="./home.html">Home</a>
+        <a href="#">Profile</a>
+        <a href="./log.html">Logout</a>
+    </div>
+    <div class="sidenav">
+        <a href="#" onclick="showSection('displayTenders')">Display Deployed Tenders</a>
+        <a href="#" onclick="showSection('myBids')">My Bids</a>
+    </div>
+    <div class="main-content">
+        <div id="displayTenders" class="section">
+            <h2>Deployed Tenders</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tender Address</th>
+                        <th>Description</th>
+                        <th>Bid</th>
+                    </tr>
+                </thead>
+                <tbody id="tendersList"></tbody>
+            </table>
+        </div>
+        <div id="myBids" class="section" style="display:none;">
+            <h2>My Bids</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tender Address</th>
+                        <th>Bid Amount</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="myBidsList"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        if (typeof window.ethereum !== 'undefined') {
+            window.web3 = new Web3(window.ethereum);
+            window.ethereum.enable(); // Request account access
+        } else if (typeof window.web3 !== 'undefined') {
+            window.web3 = new Web3(window.web3.currentProvider);
+        } else {
+            console.log('Non-Ethereum browser detected. You should consider trying MetaMask!');
+        }
+
+    const tenderFactoryABI = [
+			{
+				"constant": false,
+				"inputs": [
+					{
+						"name": "description",
+						"type": "string"
+					}
+				],
+				"name": "createTender",
+				"outputs": [],
+				"payable": false,
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"constant": true,
+				"inputs": [],
+				"name": "getDeployedTenders",
+				"outputs": [
+					{
+						"name": "",
+						"type": "address[]"
+					}
+				],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"constant": true,
+				"inputs": [
+					{
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"name": "deployedTenders",
+				"outputs": [
+					{
+						"name": "",
+						"type": "address"
+					}
+				],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+			}
+		];
+        const tenderABI = [
+			{
+				"constant": true,
+				"inputs": [],
+				"name": "winIndex",
+				"outputs": [
+					{
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"constant": true,
+				"inputs": [],
+				"name": "verifyManager",
+				"outputs": [
+					{
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"constant": true,
+				"inputs": [],
+				"name": "status",
+				"outputs": [
+					{
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"constant": true,
+				"inputs": [],
+				"name": "getBidCount",
+				"outputs": [
+					{
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"constant": false,
+				"inputs": [
+					{
+						"name": "bidAmount",
+						"type": "uint256"
+					},
+					{
+						"name": "desc",
+						"type": "string"
+					}
+				],
+				"name": "makeBid",
+				"outputs": [],
+				"payable": false,
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"constant": false,
+				"inputs": [
+					{
+						"name": "index",
+						"type": "uint256"
+					}
+				],
+				"name": "acceptBid",
+				"outputs": [],
+				"payable": false,
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"constant": true,
+				"inputs": [],
+				"name": "getSummary",
+				"outputs": [
+					{
+						"name": "",
+						"type": "address"
+					},
+					{
+						"name": "",
+						"type": "string"
+					},
+					{
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"constant": true,
+				"inputs": [
+					{
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"name": "bids",
+				"outputs": [
+					{
+						"name": "bidder",
+						"type": "address"
+					},
+					{
+						"name": "bidAmount",
+						"type": "uint256"
+					},
+					{
+						"name": "bid",
+						"type": "string"
+					},
+					{
+						"name": "accepted",
+						"type": "bool"
+					},
+					{
+						"name": "rejected",
+						"type": "bool"
+					}
+				],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"constant": true,
+				"inputs": [
+					{
+						"name": "index",
+						"type": "uint256"
+					}
+				],
+				"name": "isBidAccepted",
+				"outputs": [
+					{
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"constant": true,
+				"inputs": [],
+				"name": "manager",
+				"outputs": [
+					{
+						"name": "",
+						"type": "address"
+					}
+				],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"constant": true,
+				"inputs": [],
+				"name": "complete",
+				"outputs": [
+					{
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"constant": false,
+				"inputs": [
+					{
+						"name": "index",
+						"type": "uint256"
+					}
+				],
+				"name": "rejectBid",
+				"outputs": [],
+				"payable": false,
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"constant": true,
+				"inputs": [],
+				"name": "data",
+				"outputs": [
+					{
+						"name": "",
+						"type": "string"
+					}
+				],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"constant": false,
+				"inputs": [
+					{
+						"name": "index",
+						"type": "uint256"
+					}
+				],
+				"name": "finalizeBid",
+				"outputs": [],
+				"payable": false,
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"constant": true,
+				"inputs": [],
+				"name": "winner",
+				"outputs": [
+					{
+						"name": "bidder",
+						"type": "address"
+					},
+					{
+						"name": "bidAmount",
+						"type": "uint256"
+					},
+					{
+						"name": "bid",
+						"type": "string"
+					},
+					{
+						"name": "accepted",
+						"type": "bool"
+					},
+					{
+						"name": "rejected",
+						"type": "bool"
+					}
+				],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"constant": true,
+				"inputs": [
+					{
+						"name": "index",
+						"type": "uint256"
+					}
+				],
+				"name": "getBidSummary",
+				"outputs": [
+					{
+						"name": "",
+						"type": "address"
+					},
+					{
+						"name": "",
+						"type": "uint256"
+					},
+					{
+						"name": "",
+						"type": "string"
+					},
+					{
+						"name": "",
+						"type": "bool"
+					},
+					{
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"constant": true,
+				"inputs": [],
+				"name": "verify",
+				"outputs": [],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"name": "description",
+						"type": "string"
+					},
+					{
+						"name": "creator",
+						"type": "address"
+					}
+				],
+				"payable": false,
+				"stateMutability": "nonpayable",
+				"type": "constructor"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": false,
+						"name": "bidder",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"name": "amount",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"name": "description",
+						"type": "string"
+					}
+				],
+				"name": "BidPlaced",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": false,
+						"name": "bidder",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"name": "amount",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"name": "description",
+						"type": "string"
+					}
+				],
+				"name": "BidAccepted",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": false,
+						"name": "bidder",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"name": "amount",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"name": "description",
+						"type": "string"
+					}
+				],
+				"name": "BidRejected",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": false,
+						"name": "winner",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"name": "amount",
+						"type": "uint256"
+					}
+				],
+				"name": "TenderFinalized",
+				"type": "event"
+			}
+		];
+
+    var tenderFactoryAddress = '0xfc6aAF44f43397A6f0145768C3413BE21fBBc195';
+        const tenderFactoryContract = new web3.eth.Contract(tenderFactoryABI, tenderFactoryAddress);
+		window.onload = async function() {
+    let deployedTenders = await getDeployedTenders();
+    console.log(deployedTenders);
+
+    const loggedInUser = localStorage.getItem('loggedInUser');
+    console.log("Logged in user:", loggedInUser);
+    if (loggedInUser) {
+        displayNotification(`Welcome back, ${loggedInUser}!`);
+    }
+
+    listenForTenderFinalizedEvents(deployedTenders); // Call listenForTenderFinalizedEvents
+    showMyBids();
+};
+
+
+        function getDeployedTenders() {
+            return tenderFactoryContract.methods.getDeployedTenders().call().then(function(tenders) {
+                const tendersList = document.getElementById("tendersList");
+                tendersList.innerHTML = "";
+
+                const myBids = JSON.parse(localStorage.getItem('myBids') || '[]');
+                const userAddress = window.ethereum.selectedAddress;
+
+                tenders.forEach(function(tenderAddress) {
+                    if (!myBids.some(bid => bid.tenderAddress === tenderAddress && bid.bidder === userAddress)) {
+                        var tenderContract = new web3.eth.Contract(tenderABI, tenderAddress);
+
+                        tenderContract.methods.getSummary().call().then(function(summary) {
+                            const manager = summary[0];
+                            const description = summary[1];
+                            const bidCount = summary[2];
+
+                            const row = document.createElement("tr");
+                            row.innerHTML = `
+                                <td>${tenderAddress}</td>
+                                <td>${description}</td>
+                                <td><button onclick="makeBid('${tenderAddress}')">Make Bid</button></td>
+                            `;
+                            tendersList.appendChild(row);
+                        }).catch(function(error) {
+                            console.error("Error fetching tender details:", error);
+                        });
+                    }
+                });
+
+                return tenders;
+            }).catch(function(error) {
+                console.error("Error getting deployed tenders:", error);
+            });
+        }
+
+        // function makeBid(tenderAddress) {
+        //     var bidAmount = prompt("Enter your bid amount:");
+        //     var bidDescription = prompt("Enter your bid description:");
+
+        //     if (!bidAmount || !bidDescription) {
+        //         alert("Both amount and description are required.");
+        //         return;
+        //     }
+
+        //     var tenderContract = new web3.eth.Contract(tenderABI, tenderAddress);
+        //     tenderContract.methods.makeBid(bidAmount, bidDescription).send({ from: window.ethereum.selectedAddress })
+        //         .then(function(receipt) {
+        //             console.log("Bid made successfully:", receipt);
+
+        //             const myBids = JSON.parse(localStorage.getItem('myBids') || '[]');
+        //             myBids.push({
+        //                 tenderAddress: tenderAddress,
+        //                 bidAmount: bidAmount,
+        //                 description: bidDescription,
+        //                 bidder: window.ethereum.selectedAddress,
+        //                 status: "Pending" // Newly added status
+        //             });
+        //             localStorage.setItem('myBids', JSON.stringify(myBids));
+
+        //             showMyBids();
+        //         }).catch(function(error) {
+        //             console.error("Error making bid:", error);
+        //         });
+        // }
+
+
+		async function makeBid(tenderAddress) {
+            const bidAmount = prompt("Enter your bid amount:");
+            const bidDescription = prompt("Enter your bid description:");
+
+            if (!bidAmount || !bidDescription) {
+                alert("Both amount and description are required.");
+                return;
+            }
+
+            try {
+                const tenderContract = new web3.eth.Contract(tenderABI, tenderAddress);
+                await tenderContract.methods.makeBid(bidAmount, bidDescription).send({ from: window.ethereum.selectedAddress });
+
+                const myBids = JSON.parse(localStorage.getItem('myBids') || '[]');
+                myBids.push({
+                    tenderAddress: tenderAddress,
+                    bidAmount: bidAmount,
+                    description: bidDescription,
+                    bidder: window.ethereum.selectedAddress,
+                    status: "Pending" // Newly added status
+                });
+                localStorage.setItem('myBids', JSON.stringify(myBids));
+console.log('maa: ',myBids.status);
+                showMyBids();
+            } catch (error) {
+                console.error("Error making bid:", error);
+            }
+        }
+
+
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(section => {
+                section.style.display = 'none';
+            });
+            document.getElementById(sectionId).style.display = 'block';
+
+            if (sectionId === 'displayTenders') {
+                getDeployedTenders();
+            } else if (sectionId === 'myBids') {
+                showMyBids();
+            }
+        }
+
+        // function showMyBids() {
+        //     const myBidsList = document.getElementById("myBidsList");
+        //     myBidsList.innerHTML = "";
+
+        //     const myBids = JSON.parse(localStorage.getItem('myBids') || '[]');
+        //     const userAddress = window.ethereum.selectedAddress;
+
+        //     myBids.forEach(function(bid) {
+        //         if (bid.bidder === userAddress) {
+        //             const row = document.createElement("tr");
+        //             row.innerHTML = `
+        //                 <td>${bid.tenderAddress}</td>
+        //                 <td>${bid.bidAmount}</td>
+        //                 <td>${bid.description}</td>
+        //                 <td>${bid.status}</td> <!-- Displaying bid status -->
+        //             `;
+        //             myBidsList.appendChild(row);
+        //         }
+        //     });
+        // }
+
+        // function listenForTenderFinalizedEvents(tenders) {
+        //     tenders.forEach(function(tenderAddress) {
+        //         var tenderContract = new web3.eth.Contract(tenderABI, tenderAddress);
+
+        //         tenderContract.events.TenderFinalized()
+        //             .on('data', function(event) {
+        //                 console.log('Tender finalized event:', event);
+        //                 const winner = event.returnValues.winner;
+        //                 const amount = event.returnValues.amount;
+
+        //                 if (winner === window.ethereum.selectedAddress) {
+        //                     displayNotification(`Congratulations! You have won the tender at address ${tenderAddress} with a bid of ${amount}.`);
+        //                 }                        // Update bid status in local storage
+        //                 const myBids = JSON.parse(localStorage.getItem('myBids') || '[]');
+        //                 myBids.forEach(function(bid) {
+        //                     if (bid.tenderAddress === tenderAddress && bid.bidder === window.ethereum.selectedAddress) {
+        //                         bid.status = "Accepted";
+        //                     }
+        //                 });
+        //                 localStorage.setItem('myBids', JSON.stringify(myBids));
+
+        //                 // Refresh My Bids section
+        //                 showMyBids();
+        //             })
+        //             .on('error', console.error);
+        //     });
+        // }
+
+        // function displayNotification(message) {
+        //     alert(message); // Basic alert for notifications. You might want to replace this with a more user-friendly notification system.
+        // }
+
+
+        function showMyBids() {
+            const myBidsList = document.getElementById("myBidsList");
+            myBidsList.innerHTML = "";
+
+            const myBids = JSON.parse(localStorage.getItem('myBids') || '[]');
+            const userAddress = window.ethereum.selectedAddress;
+
+            for (const bid of myBids) {
+                if (bid.bidder === userAddress) {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td>${bid.tenderAddress}</td>
+                        <td>${bid.bidAmount}</td>
+                        <td>${bid.description}</td>
+                        <td>${bid.status || 'Pending'}</td>
+                    `;
+					console.log('maa1: ',bid.status);
+
+                    myBidsList.appendChild(row);
+                }
+            }
+        }
+// 		function listenForTenderFinalizedEvents(tenders) {
+//     console.log('Subscribed to TenderFinalized events');
+//     tenders.forEach(function(tenderFactoryAddress) {
+//         var tenderContract = new web3.eth.Contract(tenderABI, tenderFactoryAddress);
+
+//         tenderContract.events.BidAccepted()
+//             .on('data', function(event) {
+//                 console.log('Bid accepted event:', event);
+//                 const bidder = event.returnValues.bidder;
+//                 const amount = event.returnValues.amount;
+
+//                 if (bidder === window.ethereum.selectedAddress) {
+//                     displayNotification(`Congratulations! Your bid of ${amount} has been accepted for the tender at address ${tenderAddress}.`);
+//                 }
+
+//                 // Update bid status in local storage
+//                 const myBids = JSON.parse(localStorage.getItem('myBids') || '[]');
+//                 myBids.forEach(function(bid) {
+//                     if (bid.tenderAddress === tenderAddress && bid.bidder === bidder) {
+//                         bid.status = "Accepted";
+//                         console.log('Bid status updated to Accepted:', bid);
+//                     }
+//                 });
+//                 localStorage.setItem('myBids', JSON.stringify(myBids));
+
+//                 // Refresh My Bids section
+//                 showMyBids();
+//             })
+//             .on('error', console.error);
+
+//         tenderContract.events.BidRejected()
+//             .on('data', function(event) {
+//                 console.log('Bid rejected event:', event);
+//                 const bidder = event.returnValues.bidder;
+//                 const amount = event.returnValues.amount;
+
+//                 if (bidder === window.ethereum.selectedAddress) {
+//                     displayNotification(`Sorry, your bid of ${amount} has been rejected for the tender at address ${tenderAddress}.`);
+//                 }
+
+//                 // Update bid status in local storage
+//                 const myBids = JSON.parse(localStorage.getItem('myBids') || '[]');
+//                 myBids.forEach(function(bid) {
+//                     if (bid.tenderAddress === tenderAddress && bid.bidder === bidder) {
+//                         bid.status = "Rejected";
+//                         console.log('Bid status updated to Rejected:', bid);
+//                     }
+//                 });
+//                 localStorage.setItem('myBids', JSON.stringify(myBids));
+
+//                 // Refresh My Bids section
+//                 showMyBids();
+//             })
+//             .on('error', console.error);
+//     });
+// }
+function listenForTenderFinalizedEvents(tenderAddresses) {
+    if (!Array.isArray(tenderAddresses)) {
+        tenderAddresses = [tenderAddresses];
+    }
+
+    tenderAddresses.forEach(tenderAddress => {
+        var tenderContract = new web3.eth.Contract(tenderABI, tenderAddress);
+        console.log("Hooking into events for tender:", tenderAddress);
+        
+        // Listen for BidAccepted event
+        tenderContract.events.TenderFinalized()
+            .on('data', function(event) {
+				console.log("accecpted");
+                console.log('BidAccepted event:', event);
+                const bidder = event.returnValues.bidder;
+                const amount = event.returnValues.amount;
+                const description = event.returnValues.description;
+
+                updateBidStatus(tenderAddress, bidder, 'Accepted');
+            })
+            .on('error', console.error);
+
+        // Listen for BidRejected event
+        tenderContract.events.BidRejected()
+            .on('data', function(event) {
+                console.log('BidRejected event:', event);
+                const bidder = event.returnValues.bidder;
+                const amount = event.returnValues.amount;
+                const description = event.returnValues.description;
+
+                updateBidStatus(tenderAddress, bidder, 'Rejected');
+            })
+            .on('error', console.error);
+    });
+}
+
+
+
+// Function to update bid status in the user dashboard
+function updateBidStatus(tenderAddress, bidder, status) {
+    const myBids = JSON.parse(localStorage.getItem('myBids') || '[]');
+    for (let i = 0; i < myBids.length; i++) {
+        if (myBids[i].tenderAddress === tenderAddress && myBids[i].bidder === bidder) {
+            myBids[i].status = status;
+            break;
+        }
+    }
+    localStorage.setItem('myBids', JSON.stringify(myBids));
+    showMyBids(); // Update the UI to reflect the changes
+}
+
+// Update the showMyBids function to display the bid status
+function showMyBids() {
+    const myBidsList = document.getElementById("myBidsList");
+    myBidsList.innerHTML = "";
+
+    const myBids = JSON.parse(localStorage.getItem('myBids') || '[]');
+    const userAddress = window.ethereum.selectedAddress;
+
+    for (const bid of myBids) {
+        if (bid.bidder === userAddress) {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${bid.tenderAddress}</td>
+                <td>${bid.bidAmount}</td>
+                <td>${bid.description}</td>
+                <td>${bid.status || 'Pending'}</td>
+            `;
+            myBidsList.appendChild(row);
+        }
+    }
+}
+
+
+
+
+
+        function displayNotification(message) {
+            alert(message); // Basic alert for notifications. You might want to replace this with a more user-friendly notification system.
+        }
+	
+
+    </script>
+</body>
+</html>
+
+
+                       
