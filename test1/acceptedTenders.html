@@ -312,6 +312,29 @@
 				"type": "function"
 			},
 			{
+				"constant": true,
+				"inputs": [
+					{
+						"name": "bidder",
+						"type": "address"
+					}
+				],
+				"name": "getBidStatus",
+				"outputs": [
+					{
+						"name": "accepted",
+						"type": "bool"
+					},
+					{
+						"name": "rejected",
+						"type": "bool"
+					}
+				],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
 				"constant": false,
 				"inputs": [
 					{
@@ -499,7 +522,7 @@
 			}
 		];
 
-    var tenderFactoryAddress = '0xfc6aAF44f43397A6f0145768C3413BE21fBBc195';
+    var tenderFactoryAddress = '0xf34De178Fa531043F33609Bfd65c435d5a005251';
         const tenderFactoryContract = new web3.eth.Contract(tenderFactoryABI, tenderFactoryAddress);
 
         function getAcceptedTenders() {

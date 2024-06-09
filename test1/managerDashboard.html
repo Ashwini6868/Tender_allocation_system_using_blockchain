@@ -79,6 +79,47 @@
 				"type": "function"
 			},
 			{
+				"constant": false,
+				"inputs": [
+					{
+						"name": "username",
+						"type": "string"
+					},
+					{
+						"name": "password",
+						"type": "string"
+					}
+				],
+				"name": "register",
+				"outputs": [],
+				"payable": false,
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"constant": true,
+				"inputs": [
+					{
+						"name": "username",
+						"type": "string"
+					},
+					{
+						"name": "password",
+						"type": "string"
+					}
+				],
+				"name": "login",
+				"outputs": [
+					{
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
 				"constant": true,
 				"inputs": [],
 				"name": "getDeployedTenders",
@@ -86,6 +127,29 @@
 					{
 						"name": "",
 						"type": "address[]"
+					}
+				],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"constant": true,
+				"inputs": [
+					{
+						"name": "",
+						"type": "address"
+					}
+				],
+				"name": "users",
+				"outputs": [
+					{
+						"name": "username",
+						"type": "string"
+					},
+					{
+						"name": "password",
+						"type": "string"
 					}
 				],
 				"payable": false,
@@ -110,6 +174,23 @@
 				"payable": false,
 				"stateMutability": "view",
 				"type": "function"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"name": "user",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"name": "username",
+						"type": "string"
+					}
+				],
+				"name": "UserRegistered",
+				"type": "event"
 			}
 		];
         const tenderABI = [
@@ -334,6 +415,29 @@
 				"type": "function"
 			},
 			{
+				"constant": true,
+				"inputs": [
+					{
+						"name": "bidder",
+						"type": "address"
+					}
+				],
+				"name": "getBidStatus",
+				"outputs": [
+					{
+						"name": "accepted",
+						"type": "bool"
+					},
+					{
+						"name": "rejected",
+						"type": "bool"
+					}
+				],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
 				"constant": false,
 				"inputs": [
 					{
@@ -521,7 +625,7 @@
 			}
 		];
 
-    var tenderFactoryAddress = '0xfc6aAF44f43397A6f0145768C3413BE21fBBc195';
+    var tenderFactoryAddress = '0xBC76D942EFc93044C3A5DFBbC64495716Da6aCD9';
         const tenderFactoryContract = new web3.eth.Contract(tenderFactoryABI, tenderFactoryAddress);
 
         async function createTender() {
@@ -541,6 +645,8 @@
                 const tenderContract = new web3.eth.Contract(tenderABI, tenderAddress);
                 await tenderContract.methods.acceptBid(bidIndex).send({ from: accounts[0] });
                 alert('Bid accepted successfully!');
+				  // Log status to console
+				  console.log('Bid accepted! Status: Accepted');
             } catch (error) {
                 console.error("Error accepting bid:", error);
             }
@@ -585,7 +691,6 @@
             tenders.forEach(async function(tenderAddress) {
                 const tenderContract = new web3.eth.Contract(tenderABI, tenderAddress);
                 const bidsCount = await tenderContract.methods.getBidCount().call();
-
                 for (let i = 0; i < bidsCount; i++) {
                     const bid = await tenderContract.methods.getBidSummary(i).call();
                     const bidder = bid[0];
@@ -593,7 +698,7 @@
                     const desc = bid[2];
                     const isAccepted = bid[3];
                     const isRejected = bid[4];
-
+ 
                     const row = document.createElement("tr");
                     row.innerHTML = `
                         <td>${bidder}</td>

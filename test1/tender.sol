@@ -1,10 +1,47 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.4.21;
 
-contract tenderFactory {
+contract TenderFactory {
     address[] public deployedTenders;
 
+    mapping(address => User) public users;
+
+    struct User {
+        string username;
+        string password;
+    }
+
+    event UserRegistered(address indexed user, string username);
+
+    function register(string username, string password) public {
+        require(bytes(username).length > 0 && bytes(password).length > 0, "Username and password are required.");
+        require(bytes(users[msg.sender].username).length == 0, "User already registered.");
+
+        users[msg.sender] = User(username, password);
+        emit UserRegistered(msg.sender, username);
+    }
+
+    function login(string username, string password) public view returns (bool) {
+        require(bytes(username).length > 0 && bytes(password).length > 0, "Username and password are required.");
+
+        address userAddress = findUserAddress(username);
+        if (userAddress != address(0)) {
+            return keccak256(abi.encodePacked(users[userAddress].password)) == keccak256(abi.encodePacked(password));
+        }
+        return false;
+    }
+
+    function findUserAddress(string username) private view returns (address) {
+        for (uint i = 0; i < deployedTenders.length; i++) {
+            if (keccak256(abi.encodePacked(users[deployedTenders[i]].username)) == keccak256(abi.encodePacked(username))) {
+                return deployedTenders[i];
+            }
+        }
+        return address(0);
+    }
+
     function createTender(string description) public {
+        // require(login(users[msg.sender].username, users[msg.sender].password), "Unauthorized user.");
         address newTender = new Tender(description, msg.sender);
         deployedTenders.push(newTender);
     }
@@ -74,7 +111,6 @@ contract Tender {
         emit BidPlaced(msg.sender, bidAmount, desc);
     }
 
-  
     function acceptBid(uint index) public restricted {
         require(!complete);
         require(index < bids.length);
@@ -137,5 +173,14 @@ contract Tender {
 
     function status() public view returns (bool) {
         return complete;
+    }
+
+    function getBidStatus(address bidder) public view returns (bool accepted, bool rejected) {
+        for (uint i = 0; i < bids.length; i++) {
+            if (bids[i].bidder == bidder) {
+                return (bids[i].accepted, bids[i].rejected);
+            }
+        }
+        revert("Bid not found for this address.");
     }
 }
